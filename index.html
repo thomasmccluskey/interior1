@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Masonry Gallery</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #f8f8f8;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: start;
+    gap: 24px;
+    padding: 32px 24px;
+    margin: 0;
+  }
+
+  .gallery .column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .gallery figure {
+    margin: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .gallery img {
+    width: 100%;
+    display: block;
+  }
+
+  .gallery .overlay,
+  .gallery .hover-header {
+    opacity: 0;
+    transition: opacity 200ms ease;
+    pointer-events: none;
+  }
+
+  .gallery figure:hover .overlay,
+  .gallery figure:hover .hover-header {
+    opacity: 1;
+  }
+
+  .gallery .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+  }
+
+  .gallery .hover-header {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .gallery .style-label {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+
+  .gallery .inspect-btn {
+    padding: 6px 14px;
+    background: #fff;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 999px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .gallery figure:hover .hover-header {
+    pointer-events: auto;
+  }
+
+  @media (max-width: 1200px) {
+    .gallery { grid-template-columns: repeat(3, 1fr); }
+    .gallery .column:nth-child(n+4) { display: none; }
+  }
+
+  @media (max-width: 800px) {
+    .gallery { grid-template-columns: repeat(2, 1fr); }
+    .gallery .column:nth-child(n+3) { display: none; }
+  }
+
+  @media (max-width: 500px) {
+    .gallery { grid-template-columns: 1fr; }
+    .gallery .column:nth-child(n+2) { display: none; }
+  }
+
+  .site-footer {
+    text-align: center;
+    padding: 32px 24px;
+    color: #000;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .back-to-top {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 200ms ease, transform 200ms ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .back-to-top.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .back-to-top:hover {
+    transform: translateY(-3px);
+  }
+
+  .back-to-top svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .gallery {
+    transition: opacity 300ms ease;
+  }
+
+  .gallery figure {
+    cursor: pointer;
+  }
+
+  .detail-view {
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 500ms ease;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .detail-view.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .detail-col {
+    position: relative;
+  }
+
+  .detail-col.right {
+    padding: 0 32px;
+  }
+
+  .detail-text {
+    opacity: 0;
+    transition: opacity 300ms ease;
+  }
+
+  .detail-text.visible {
+    opacity: 1;
+  }
+
+  .detail-desc {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    color: #222;
+  }
+
+  .detail-source {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    color: #999;
+    margin-top: 4px;
+  }
+
+  .flying-clone {
+    position: fixed;
+    margin: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 101;
+    will-change: left, top, width, height;
+  }
+
+  .flying-clone img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+
+  .back-btn {
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: #fff;
+    color: #222;
+    border: 1px solid #e8e8e8;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 102;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 300ms ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  .back-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .back-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+</style>
+</head>
+<body>
+  <div class="gallery" id="gallery"></div>
+
+  <div class="detail-view" id="detailView">
+    <div class="detail-col left"></div>
+    <div class="detail-col center"></div>
+    <div class="detail-col right">
+      <div class="detail-text" id="detailText">
+        <div class="detail-desc" id="detailDesc"></div>
+        <div class="detail-source" id="detailSource"></div>
+      </div>
+    </div>
+  </div>
+  <button class="back-btn" id="backBtn" aria-label="Back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+  </button>
+
+  <footer class="site-footer">Created using Claude Code and Vercel</footer>
+
+  <button class="back-to-top" aria-label="Back to top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+    Back to top
+  </button>
+
+  <script>
+    const images = [
+      "images/05552ba1-40b8-4663-a35e-be1076c78e2c.jpg",
+      "images/0c91d281-99ef-48e9-9751-abd37400579f.jpg",
+      "images/1c9e0ba1-c67a-4131-aff2-a0bd64c41492.jpg",
+      "images/1f5f8c7d-b14c-4b7f-9801-65beb9ce0439.jpg",
+      "images/225c88d1-4c4b-4f28-b4e2-23c07dfb3df3.jpg",
+      "images/2d7d39da-47dd-4d2c-ad86-e35ed756a685.jpg",
+      "images/3050713c-bfa8-4d32-894c-0b26313ac7b8.jpg",
+      "images/36606c45-91a3-4d89-8005-67d9406c398f.jpg",
+      "images/39675a88-7651-4d79-a7f7-3c1a1b08a306.jpg",
+      "images/48837dfc-6676-4612-9203-4b90e409c349.jpg",
+      "images/4aa86532-f0c2-49bf-a459-b993912457cf.jpg",
+      "images/50002c3e-19e7-4d84-a143-6944d2c46e5a.jpg",
+      "images/513e3329-bae9-43cc-b199-cd22b91133be.jpg",
+      "images/55e16ee4-b8b8-4d32-aa52-195c0196c845.jpg",
+      "images/57c8f67c-738d-4990-82e1-85c68278077f.jpg",
+      "images/588b1fe4-e9b2-403f-9cb0-982fe5511d75.jpg",
+      "images/5a12e5fe-bd07-4306-a192-8d68586b4c74.jpg",
+      "images/5ee3c3a7-24eb-4b83-a5d1-76074303f0b7.jpg",
+      "images/6c3762bf-2aed-4c08-96d9-1a9acfecfe56.jpg",
+      "images/6c48181b-a531-4297-9eb0-a234838da5c7.jpg",
+      "images/76a5af7d-3708-4830-9ca5-2666a7c5a69c.jpg",
+      "images/80b6ba1c-268b-4d3c-b86d-b28b48557880.jpg",
+      "images/88a1bd5c-430c-4f27-ac48-a4af0fd69cce.jpg",
+      "images/99877df4-6e81-4979-ac81-096fe88dd58a.jpg",
+      "images/a37812f9-e55c-4938-a6dc-5946e2df2c46.jpg",
+      "images/a5bee1fd-7d0e-42af-8c04-956f4faef628.jpg",
+      "images/b7888ebd-d57b-4e86-8863-b57060024e12.jpg",
+      "images/c87ed3d8-9867-4606-b3bd-32e9ae9974af.jpg",
+      "images/ce505a4b-3136-4c47-8dd3-52f9849ebf97.jpg",
+      "images/d2a96622-0bc4-46c7-b54b-ac8b030ce68f.jpg",
+      "images/d9e132d9-8ed4-43a6-9ece-6c5b75e9e7b9.jpg",
+      "images/db35ae35-da28-4b8d-9305-202a8711748b.jpg",
+      "images/ddb257f6-fc16-4893-a943-b92f4d471a8d.jpg",
+      "images/e80779dd-f9e3-4310-9b8c-3960582bb004.jpg",
+      "images/eadb76f2-c60f-42f0-960d-433db44f6d6d.jpg",
+      "images/fb9228ba-c622-4baa-bb2e-427aaf736852.jpg"
+    ];
+
+    const COLUMN_COUNT = 5;
+    const gallery = document.getElementById('gallery');
+    const columns = [];
+    for (let i = 0; i < COLUMN_COUNT; i++) {
+      const col = document.createElement('div');
+      col.className = 'column';
+      gallery.appendChild(col);
+      columns.push(col);
+    }
+    const STYLES = ['Mid Century Modern', 'Danish Modern', 'French Interior', 'German Modernist', 'Mid Century'];
+
+    const DESCRIPTIONS = [
+      ['The home office of architect Finn Juhl at his house.', 'Located in Ordrup, Denmark.'],
+      ['Solid teak dining table with Hans Wegner Wishbone chairs.', 'Private residence, Aarhus, Denmark.'],
+      ['French atelier living room with oak parquet flooring.', 'Paris, 7th arrondissement.'],
+      ['Mid-century bedroom with walnut case pieces and linen.', 'Los Angeles, California.'],
+      ['German Modernist study with cantilevered shelving.', 'Berlin, 1962.'],
+      ['Teak sideboard with cane-front doors, Danish Modern.', 'Copenhagen, Denmark.'],
+      ['French country kitchen with soapstone counters and tile floor.', 'Provence, France.'],
+      ['Modernist library with floor-to-ceiling oak shelving.', 'Stockholm, Sweden.'],
+      ['Bauhaus-era sitting room with leather Barcelona chairs.', 'Dessau, Germany.'],
+      ['Japanese-inspired tatami room with shoji screens.', 'Kyoto, Japan.'],
+      ['Rosewood credenza beneath a Poul Henningsen pendant.', 'Odense, Denmark.'],
+      ['Brutalist studio apartment with exposed concrete ceiling.', 'Marseille, France.'],
+      ['Reading nook with Eames lounge chair and Noguchi table.', 'San Francisco, California.'],
+      ['Country kitchen with hand-plastered walls and beamed ceiling.', 'Tuscany, Italy.']
+    ];
+
+    images.forEach((src, i) => {
+      const figure = document.createElement('figure');
+      figure.dataset.index = i;
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = '';
+
+      const overlay = document.createElement('div');
+      overlay.className = 'overlay';
+
+      const header = document.createElement('div');
+      header.className = 'hover-header';
+
+      const label = document.createElement('span');
+      label.className = 'style-label';
+      label.textContent = STYLES[i % STYLES.length];
+
+      const inspect = document.createElement('button');
+      inspect.className = 'inspect-btn';
+      inspect.textContent = 'Inspect';
+
+      header.append(label, inspect);
+      figure.append(img, overlay, header);
+      columns[i % COLUMN_COUNT].appendChild(figure);
+    });
+
+    const detailView = document.getElementById('detailView');
+    const backBtn = document.getElementById('backBtn');
+    const detailText = document.getElementById('detailText');
+    const detailDesc = document.getElementById('detailDesc');
+    const detailSource = document.getElementById('detailSource');
+    let activeLightbox = null;
+
+    function springAnimate(from, to, onUpdate, onComplete, onApproach) {
+      const stiffness = 175, damping = 19, mass = 1;
+      const values = { ...from };
+      const vels = {};
+      for (const k in from) vels[k] = 0;
+      let totalDistSq = 0;
+      for (const k in from) totalDistSq += (from[k] - to[k]) ** 2;
+      const totalDist = Math.sqrt(totalDistSq);
+      let approachFired = false;
+      let last = performance.now();
+      let raf;
+
+      const tick = now => {
+        const dt = Math.min((now - last) / 1000, 0.064);
+        last = now;
+        let settled = true;
+        for (const k in values) {
+          const disp = values[k] - to[k];
+          const force = -stiffness * disp - damping * vels[k];
+          const acc = force / mass;
+          vels[k] += acc * dt;
+          values[k] += vels[k] * dt;
+          if (Math.abs(disp) >= 0.5 || Math.abs(vels[k]) >= 0.5) settled = false;
+        }
+        if (!approachFired && onApproach && totalDist > 0) {
+          let remainDistSq = 0;
+          for (const k in values) remainDistSq += (values[k] - to[k]) ** 2;
+          if (Math.sqrt(remainDistSq) / totalDist < 0.15) {
+            approachFired = true;
+            onApproach();
+          }
+        }
+        onUpdate(values);
+        if (!settled) {
+          raf = requestAnimationFrame(tick);
+        } else {
+          onUpdate({ ...to });
+          onComplete && onComplete();
+        }
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
+    }
+
+    function openLightbox(figure) {
+      if (activeLightbox) {
+        const prev = activeLightbox;
+        prev.cancel && prev.cancel();
+        prev.clone.remove();
+        activeLightbox = null;
+      }
+
+      const rect = figure.getBoundingClientRect();
+      const img = figure.querySelector('img');
+      const natW = img.naturalWidth || rect.width;
+      const natH = img.naturalHeight || rect.height;
+      const aspect = natW / natH;
+
+      const maxW = window.innerWidth / 3 - 24;
+      const maxH = window.innerHeight * 0.85;
+      let targetW = maxW;
+      let targetH = targetW / aspect;
+      if (targetH > maxH) {
+        targetH = maxH;
+        targetW = targetH * aspect;
+      }
+      const targetX = (window.innerWidth - targetW) / 2;
+      const targetY = (window.innerHeight - targetH) / 2;
+
+      const clone = document.createElement('div');
+      clone.className = 'flying-clone';
+      const cloneImg = document.createElement('img');
+      cloneImg.src = img.src;
+      clone.appendChild(cloneImg);
+      clone.style.left = rect.left + 'px';
+      clone.style.top = rect.top + 'px';
+      clone.style.width = rect.width + 'px';
+      clone.style.height = rect.height + 'px';
+      document.body.appendChild(clone);
+
+      const savedScroll = window.scrollY;
+      gallery.style.opacity = '0';
+      gallery.style.pointerEvents = 'none';
+      detailView.classList.add('visible');
+      backBtn.style.top = targetY + 'px';
+      backBtn.classList.add('visible');
+
+      const idx = parseInt(figure.dataset.index, 10) || 0;
+      const [desc, source] = DESCRIPTIONS[idx % DESCRIPTIONS.length];
+      detailDesc.textContent = desc;
+      detailSource.textContent = source;
+      detailText.style.paddingTop = targetY + 'px';
+
+      const hideGalleryTimer = setTimeout(() => {
+        if (activeLightbox && activeLightbox.clone === clone) {
+          gallery.style.display = 'none';
+        }
+      }, 300);
+
+      const cancel = springAnimate(
+        { x: rect.left, y: rect.top, w: rect.width, h: rect.height },
+        { x: targetX, y: targetY, w: targetW, h: targetH },
+        v => {
+          clone.style.left = v.x + 'px';
+          clone.style.top = v.y + 'px';
+          clone.style.width = v.w + 'px';
+          clone.style.height = v.h + 'px';
+        },
+        null,
+        () => {
+          detailText.classList.add('visible');
+        }
+      );
+
+      activeLightbox = { figure, clone, rect, cancel, savedScroll, hideGalleryTimer };
+    }
+
+    function closeLightbox() {
+      if (!activeLightbox) return;
+      const { figure, clone, rect, cancel, savedScroll, hideGalleryTimer } = activeLightbox;
+      activeLightbox = null;
+      cancel && cancel();
+      clearTimeout(hideGalleryTimer);
+
+      figure.style.opacity = '0';
+
+      gallery.style.display = '';
+      window.scrollTo(0, savedScroll);
+      requestAnimationFrame(() => {
+        gallery.style.opacity = '1';
+        gallery.style.pointerEvents = '';
+      });
+      detailView.classList.remove('visible');
+      backBtn.classList.remove('visible');
+      detailText.classList.remove('visible');
+
+      const current = {
+        x: parseFloat(clone.style.left),
+        y: parseFloat(clone.style.top),
+        w: parseFloat(clone.style.width),
+        h: parseFloat(clone.style.height)
+      };
+
+      springAnimate(
+        current,
+        { x: rect.left, y: rect.top, w: rect.width, h: rect.height },
+        v => {
+          clone.style.left = v.x + 'px';
+          clone.style.top = v.y + 'px';
+          clone.style.width = v.w + 'px';
+          clone.style.height = v.h + 'px';
+        },
+        () => {
+          figure.style.opacity = '1';
+          clone.remove();
+        }
+      );
+    }
+
+    gallery.addEventListener('click', e => {
+      const figure = e.target.closest('figure');
+      if (!figure) return;
+      openLightbox(figure);
+    });
+
+    backBtn.addEventListener('click', closeLightbox);
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeLightbox();
+    });
+
+    const btn = document.querySelector('.back-to-top');
+    window.addEventListener('scroll', () => {
+      btn.classList.toggle('visible', window.scrollY > 300);
+    });
+    btn.addEventListener('click', () => {
+      const startY = window.scrollY;
+      const duration = 900;
+      const startTime = performance.now();
+      const easeOut = t => 1 - Math.pow(1 - t, 3);
+
+      const step = now => {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        window.scrollTo(0, startY * (1 - easeOut(progress)));
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  </script>
+</body>
+</html>
