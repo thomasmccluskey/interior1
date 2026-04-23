@@ -215,7 +215,8 @@
     border-radius: 12px;
     overflow: hidden;
     z-index: 101;
-    will-change: left, top, width, height;
+    transform-origin: top left;
+    will-change: transform;
   }
 
   .flying-clone img {
@@ -465,7 +466,10 @@
       clone.style.top = rect.top + 'px';
       clone.style.width = rect.width + 'px';
       clone.style.height = rect.height + 'px';
+      clone.style.transform = 'translate(0px, 0px) scale(1)';
       document.body.appendChild(clone);
+
+      const springState = { tx: 0, ty: 0, s: 1 };
 
       const savedScroll = window.scrollY;
       gallery.style.opacity = '0';
@@ -487,13 +491,13 @@
       }, 300);
 
       const cancel = springAnimate(
-        { x: rect.left, y: rect.top, w: rect.width, h: rect.height },
-        { x: targetX, y: targetY, w: targetW, h: targetH },
+        { tx: 0, ty: 0, s: 1 },
+        { tx: targetX - rect.left, ty: targetY - rect.top, s: targetW / rect.width },
         v => {
-          clone.style.left = v.x + 'px';
-          clone.style.top = v.y + 'px';
-          clone.style.width = v.w + 'px';
-          clone.style.height = v.h + 'px';
+          springState.tx = v.tx;
+          springState.ty = v.ty;
+          springState.s = v.s;
+          clone.style.transform = `translate(${v.tx}px, ${v.ty}px) scale(${v.s})`;
         },
         null,
         () => {
@@ -501,12 +505,12 @@
         }
       );
 
-      activeLightbox = { figure, clone, rect, cancel, savedScroll, hideGalleryTimer };
+      activeLightbox = { figure, clone, rect, cancel, savedScroll, hideGalleryTimer, springState };
     }
 
     function closeLightbox() {
       if (!activeLightbox) return;
-      const { figure, clone, rect, cancel, savedScroll, hideGalleryTimer } = activeLightbox;
+      const { figure, clone, cancel, savedScroll, hideGalleryTimer, springState } = activeLightbox;
       activeLightbox = null;
       cancel && cancel();
       clearTimeout(hideGalleryTimer);
@@ -523,21 +527,14 @@
       backBtn.classList.remove('visible');
       detailText.classList.remove('visible');
 
-      const current = {
-        x: parseFloat(clone.style.left),
-        y: parseFloat(clone.style.top),
-        w: parseFloat(clone.style.width),
-        h: parseFloat(clone.style.height)
-      };
-
       springAnimate(
-        current,
-        { x: rect.left, y: rect.top, w: rect.width, h: rect.height },
+        { tx: springState.tx, ty: springState.ty, s: springState.s },
+        { tx: 0, ty: 0, s: 1 },
         v => {
-          clone.style.left = v.x + 'px';
-          clone.style.top = v.y + 'px';
-          clone.style.width = v.w + 'px';
-          clone.style.height = v.h + 'px';
+          springState.tx = v.tx;
+          springState.ty = v.ty;
+          springState.s = v.s;
+          clone.style.transform = `translate(${v.tx}px, ${v.ty}px) scale(${v.s})`;
         },
         () => {
           figure.style.opacity = '1';
